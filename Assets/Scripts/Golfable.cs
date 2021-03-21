@@ -21,7 +21,7 @@ public class Golfable : MonoBehaviour
 
     public void Hit(Vector3 initialVelocity)
     {
-        _rigidbody.velocity = initialVelocity;
         _rigidbody.isKinematic = false;
+        _rigidbody.AddForce(initialVelocity, ForceMode.Impulse);
     }
 }
