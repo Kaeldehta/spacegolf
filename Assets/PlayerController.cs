@@ -1,38 +1,45 @@
-﻿using UnityEngine;
+﻿using System.Linq;
+using System.Transactions;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 public class PlayerController : MonoBehaviour
 {
+    private float _strength = 0;
 
-    private Golfable _golfable;
-
-    private float _strength;
-
-    private float _verticalAngle;
-
-    private bool _inputAllowed;
+    private float _verticalAngle = 1f;
 
     [SerializeField] private float horizontalSpeed;
     [SerializeField] private float verticalSpeed;
     [SerializeField] private float maxVerticalAngle;
     [SerializeField] private float strengthSpeed;
-    
-    void Start()
+
+    public Vector3 InitVelocity { get; private set; }
+
+    private void Awake()
     {
-        _golfable = FindObjectOfType<Golfable>();
-        _inputAllowed = true;
-        _verticalAngle = 0;
-        _strength = 0.01f;
+
+        GameStateManager.Instance.ONInputEnter += HandleInputEnter;
     }
+
+    private void HandleInputEnter()
+    {
+        _verticalAngle = 0;
+        _strength = 1f;
+
+        transform.up = (GameStateManager.Instance.GolfBall.transform.position - GameStateManager.Instance.Planet.transform.position).normalized;
+    }
+    
 
     private void Update()
     {
-        if (!_inputAllowed) return;
+
+        if (GameStateManager.Instance.CurrentState != GameStateManager.GameState.Input) return;
 
         // Calculate parameters based on user input;
 
         var turnDir = Input.GetAxis("Horizontal");
-        
+
         transform.rotation *= Quaternion.AngleAxis(turnDir * horizontalSpeed * Time.deltaTime, Vector3.up);
 
         var angleIncrease = Input.GetAxis("Vertical");
@@ -41,22 +48,18 @@ public class PlayerController : MonoBehaviour
 
         var strengthDelta = Input.GetAxis("Mouse ScrollWheel");
 
-        _strength = Mathf.Max(0.01f, _strength + strengthDelta * Time.deltaTime * strengthSpeed);
+        _strength = Mathf.Max(1f, _strength + strengthDelta * Time.deltaTime * strengthSpeed);
 
         // Calculate initial velocity based on parameters.
         
         var rotation = Quaternion.AngleAxis(_verticalAngle, -transform.right);
         var direction = rotation * transform.forward;
-        var initVelocity = _strength * direction;
-        
-        Debug.DrawLine(_golfable.transform.position, _golfable.transform.position + initVelocity, Color.red);
+        InitVelocity = _strength * direction;
         
         // Hit golf ball and apply initial velocity when space is pressed.
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            
-            _golfable.Hit(initVelocity);
-            _inputAllowed = false;
+            GameStateManager.Instance.StartBallMovement(InitVelocity);
         }
         
 
