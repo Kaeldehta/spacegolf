@@ -7,25 +7,34 @@ using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
+    // the prefab that should be used for the golfball
     [SerializeField] private GameObject golfballPrefab;
 
+    // the current state the game is in
     public GameState CurrentState { get; private set; }
 
+    // singleton instance to access gamemanager from any behaviour
     public static GameManager Instance { get; private set; }
 
+    // reference to the planet
     public GameObject Planet { get; private set; }
 
+    // reference to the golfball
     public GameObject GolfBall { get; private set; }
 
+    // reference to the player controller
     public PlayerController Controller { get; private set; }
 
+    // how strong gravity should be
     [SerializeField] private float gravitationalConstant;
 
+    // getter property for grav constant
     public float GravitationalConstant => gravitationalConstant;
 
+    // how many times the player has hit the ball
     public int NumberOfHits { get; private set; }
 
-
+    // enumeration of all possible game states
     public enum GameState
     {
         Input,
@@ -38,28 +47,35 @@ public class GameManager : MonoBehaviour
 
     private void Awake()
     {
+        // initialize singleton instance if its null
         if (Instance == null)
         {
             Instance = this;
         }
 
+        // get player controller
         Controller = GetComponent<PlayerController>();
 
+        // when ballmovement starts enter ball movement state and increase hit counter
         ONBallMovementEnter += initVelo =>
         {
             CurrentState = GameState.BallMovement;
             NumberOfHits += 1;
         };
+        // when input starts enter input state
         ONInputEnter += () =>
         {
             CurrentState = GameState.Input;
             
         };
+        // when main menu starts enter main menu state
         ONMainMenuEnter += () => CurrentState = GameState.MainMenu;
+        // when level selection starts enter level selection state
         ONLevelSelectEnter += () =>
         {
             CurrentState = GameState.LevelSelection;
         };
+        // load level and start level when done loading
         ONLevelLoadEnter += id =>
         {
             var loadParams = new LoadSceneParameters(LoadSceneMode.Additive);
@@ -69,9 +85,10 @@ public class GameManager : MonoBehaviour
                 if (loadedScene == scene) StartLevel(scene);
             };
         };
-
+        // when level completed enter level complete state
         ONLevelCompleted += () => CurrentState = GameState.LevelComplete;
 
+        // when level is started set active scene, instantiate golfball and find planet
         ONLevelStart += scene =>
         {
             SceneManager.SetActiveScene(scene);
@@ -85,15 +102,16 @@ public class GameManager : MonoBehaviour
             NumberOfHits = 0;
         };
 
+        // when level start is complete start input
         ONLevelStartExit += () => StartInput();
 
+        // when going back to main menu unload level and switch back to main menu scene
         ONBackToMainMenu += () =>
         {
             var scene = SceneManager.GetActiveScene();
 
             SceneManager.UnloadSceneAsync(scene);
 
-            var loadParams = new LoadSceneParameters(LoadSceneMode.Single);
             var main = SceneManager.GetSceneByBuildIndex(0);
             SceneManager.SetActiveScene(main);
 
@@ -104,10 +122,11 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        Debug.Log("Start game");
+        // start the game by going into main menu
         StartMainMenu();
     }
 
+    // all events that can be listened to by other behaviours
     public event Action<Vector3> ONBallMovementEnter;
 
     public event Action ONInputEnter;
@@ -128,29 +147,25 @@ public class GameManager : MonoBehaviour
 
     public event Action ONBackToMainMenu;
 
+    // invoke ONMainMenuEnter event
     public void StartMainMenu() => ONMainMenuEnter?.Invoke();
 
+    // invoke ONBallMovementEnter event
     public void StartBallMovement(Vector3 initVelocity) => ONBallMovementEnter?.Invoke(initVelocity);
 
+    // invoke ONInputEnter event
     public void StartInput() => ONInputEnter?.Invoke();
 
-    public void LoadLevel(int id)
-    {
-        ONLevelLoadEnter?.Invoke(id);
-    }
+    // invoke ONLevelLoadEnter event
+    public void LoadLevel(int id) => ONLevelLoadEnter?.Invoke(id);
 
-    public void CompleteLevel()
-    {
-        ONLevelCompleted?.Invoke();
-    }
+    // invoke ONLevelCompleted event
+    public void CompleteLevel() => ONLevelCompleted?.Invoke();
 
-    public void BackToMainMenu()
-    {
-        Debug.Log("Back");
-        ONBackToMainMenu?.Invoke();
-    }
+    // invoke ONBackToMainMenu event
+    public void BackToMainMenu() => ONBackToMainMenu?.Invoke();
 
-
+    // invoke level start events
     public void StartLevel(Scene scene)
     {
         ONLevelStart?.Invoke(scene);
@@ -158,16 +173,13 @@ public class GameManager : MonoBehaviour
         ONLevelStartExit?.Invoke();
     }
 
-    public void StartLevelSelection()
-    {
-        ONLevelSelectEnter?.Invoke();
-    }
+    // invoke ONLevelSelectEnter event
+    public void StartLevelSelection() => ONLevelSelectEnter?.Invoke();
 
-    public void StartHowTo()
-    {
-        ONHowToEnter?.Invoke();
-    }
+    // invoke ONHowToEnter event
+    public void StartHowTo() => ONHowToEnter?.Invoke();
 
+    // method to quit game
     public void QuitGame() => Application.Quit();
 
 }
