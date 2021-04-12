@@ -5,7 +5,7 @@ using UnityEngine.UIElements;
 
 public class PlayerController : MonoBehaviour
 {
-    private float _strength = 0;
+    private float _strength = 5;
 
     private float _verticalAngle = 1f;
 
@@ -14,27 +14,30 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float maxVerticalAngle;
     [SerializeField] private float strengthSpeed;
 
+    [SerializeField] private float maxStrength;
+    [SerializeField] private float minStrength;
+
     public Vector3 InitVelocity { get; private set; }
 
     private void Awake()
     {
 
-        GameStateManager.Instance.ONInputEnter += HandleInputEnter;
+        GameManager.Instance.ONInputEnter += HandleInputEnter;
+        GameManager.Instance.ONLevelStartExit += () => {
+            _strength = 5;
+        };
     }
 
     private void HandleInputEnter()
     {
-        _verticalAngle = 0;
-        _strength = 1f;
-
-        transform.up = (GameStateManager.Instance.GolfBall.transform.position - GameStateManager.Instance.Planet.transform.position).normalized;
+        transform.up = (GameManager.Instance.GolfBall.transform.position - GameManager.Instance.Planet.transform.position).normalized;
     }
     
 
     private void Update()
     {
 
-        if (GameStateManager.Instance.CurrentState != GameStateManager.GameState.Input) return;
+        if (GameManager.Instance.CurrentState != GameManager.GameState.Input) return;
 
         // Calculate parameters based on user input;
 
@@ -46,10 +49,13 @@ public class PlayerController : MonoBehaviour
 
         _verticalAngle = Mathf.Min(Mathf.Max(_verticalAngle + angleIncrease * Time.deltaTime * verticalSpeed, 0), maxVerticalAngle);
 
-        var strengthDelta = Input.GetAxis("Mouse ScrollWheel");
+        if (!Input.GetKey(KeyCode.LeftControl))
+        {
+            var strengthDelta = Input.GetAxis("Mouse ScrollWheel");
 
-        _strength = Mathf.Max(1f, _strength + strengthDelta * Time.deltaTime * strengthSpeed);
-
+            _strength = Mathf.Min(Mathf.Max(minStrength, _strength + strengthDelta * Time.deltaTime * strengthSpeed), maxStrength);
+        }
+        
         // Calculate initial velocity based on parameters.
         
         var rotation = Quaternion.AngleAxis(_verticalAngle, -transform.right);
@@ -59,7 +65,7 @@ public class PlayerController : MonoBehaviour
         // Hit golf ball and apply initial velocity when space is pressed.
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            GameStateManager.Instance.StartBallMovement(InitVelocity);
+            GameManager.Instance.StartBallMovement(InitVelocity);
         }
         
 
