@@ -6,8 +6,10 @@ using UnityEngine;
 public class AlignToParent : MonoBehaviour
 {
 
+#if UNITY_EDITOR
     void Update()
     {
         transform.up = transform.position - transform.parent.position;
     }
+#endif
 }
