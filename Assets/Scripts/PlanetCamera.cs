@@ -4,39 +4,50 @@ using UnityEngine;
 
 public class PlanetCamera : MonoBehaviour
 {
-    [SerializeField] float radius;
+    [SerializeField] float minRadius = 15;
 
     [SerializeField] float speed;
+    [SerializeField] float zoomSpeed;
+
+    private float rightAngle;
+    private float upAngle;
+
+    private float radius;
 
     private void Awake()
     {
-        GameStateManager.Instance.ONLevelStartExit += () =>
-        {
-            var up = GameStateManager.Instance.GolfBall.transform.position - GameStateManager.Instance.Planet.transform.position;
-            up.Normalize();
-
-            transform.position = GameStateManager.Instance.Planet.transform.position + up * radius;
-
-        };
-
-        Cursor.visible = false;
-
+        radius = minRadius;
+        GameManager.Instance.ONInputEnter += () => rightAngle = Mathf.Max(Mathf.Min(60, rightAngle), -60);
+        GameManager.Instance.ONLevelCompleted += () => Cursor.visible = true;
     }
 
     void LateUpdate()
     {
+        if (GameManager.Instance.CurrentState == GameManager.GameState.LevelComplete) return;
+        
+        if(Input.GetMouseButtonDown(0)) Cursor.visible = false;
+        if (Input.GetMouseButtonUp(0)) Cursor.visible = true;
 
-        //if (!Input.GetMouseButton(0)) return;
+        if (Input.GetMouseButton(0))
+        {
+            upAngle += Input.GetAxis("Mouse X") * speed * Time.deltaTime;
+            rightAngle += Input.GetAxis("Mouse Y") * speed * Time.deltaTime;
 
-        //if(Input.GetMouseButtonUp(0)) _oldMousePos = Input.mousePosition;
+            rightAngle = Mathf.Max(Mathf.Min(60, rightAngle), -60);
+        }
 
-        var currentPos = transform.position - GameStateManager.Instance.Planet.transform.position;
+        if (Input.GetKey(KeyCode.LeftControl))
+        {
+            radius -= Time.deltaTime * Input.GetAxis("Mouse ScrollWheel") * zoomSpeed;
+            radius = Mathf.Max(Mathf.Min(radius, 30), 15);
+        }
 
-        var rot1 = Quaternion.AngleAxis(Input.GetAxis("Mouse X") * speed * Time.deltaTime, Vector3.up);
-        var rot2 = Quaternion.AngleAxis(Input.GetAxis("Mouse Y") * speed * Time.deltaTime, Vector3.right);
+        var rot = Quaternion.Euler(rightAngle, upAngle, 0);
 
-        transform.position = GameStateManager.Instance.Planet.transform.position + rot1 * rot2 * currentPos;
+        var currentPos = rot * Vector3.forward * radius;
 
-        transform.LookAt(GameStateManager.Instance.Planet.transform);
+        transform.position = GameManager.Instance.Planet.transform.position + currentPos;
+
+        transform.LookAt(GameManager.Instance.Planet.transform);
     }
 }
