@@ -26,9 +26,9 @@ public class TrajectorySimulation : MonoBehaviour
     public void CreateTrajectory()
     {
         
-        simGolfableRb.transform.SetPositionAndRotation(GameStateManager.Instance.GolfBall.transform.position, GameStateManager.Instance.GolfBall.transform.rotation);
+        simGolfableRb.transform.SetPositionAndRotation(GameManager.Instance.GolfBall.transform.position, GameManager.Instance.GolfBall.transform.rotation);
 
-        simGolfableRb.velocity = GameStateManager.Instance.Controller.InitVelocity;
+        simGolfableRb.velocity = GameManager.Instance.Controller.InitVelocity;
 
         for (int i = 0; i < steps; i++)
         {
@@ -37,7 +37,7 @@ public class TrajectorySimulation : MonoBehaviour
             Vector3 between = _simTarget.transform.position - simGolfableRb.transform.position;
             
             // Calculate the acceleration that needs to be applied to this GameObject
-            Vector3 acceleration = GameSettings.Instance.GravitationalConstant  * _simTarget.mass /
+            Vector3 acceleration = GameManager.Instance.GravitationalConstant  * _simTarget.mass /
                 between.sqrMagnitude * between.normalized;
 
             // Apply acceleration to rigidbody
@@ -66,25 +66,20 @@ public class TrajectorySimulation : MonoBehaviour
         _renderer = GetComponent<LineRenderer>();
         _renderer.positionCount = steps / 5;
 
-        GameStateManager.Instance.ONLevelStart += () =>
+        GameManager.Instance.ONLevelStart += levelName =>
         {
             var param = new LoadSceneParameters(LoadSceneMode.Additive, LocalPhysicsMode.Physics3D);
             _scene = SceneManager.LoadScene("Scenes/TrajectorySimulationScene", param);
             _trajSimScene = _scene.GetPhysicsScene();
 
-            _simTarget = Instantiate(GameStateManager.Instance.Planet).GetComponent<Rigidbody>();
+            _simTarget = Instantiate(GameManager.Instance.Planet).GetComponent<Rigidbody>();
             Destroy(_simTarget.GetComponent<MeshRenderer>());
             Destroy(_simTarget.GetComponent<MeshFilter>());
             _simTarget.tag = "Untagged";
 
             foreach (var meshRenderer in _simTarget.GetComponentsInChildren<MeshRenderer>())
             {
-                Destroy(meshRenderer);
-            }
-
-            foreach (var meshFilter in _simTarget.GetComponentsInChildren<MeshFilter>())
-            {
-                Destroy(meshFilter);
+                meshRenderer.enabled = false;
             }
 
             SceneManager.MoveGameObjectToScene(_simTarget.gameObject, _scene);
@@ -95,13 +90,15 @@ public class TrajectorySimulation : MonoBehaviour
             SceneManager.MoveGameObjectToScene(simGolfableRb.gameObject, _scene);
         };
 
-        GameStateManager.Instance.ONBallMovementEnter += velocity => ResetTrajectory();
+        GameManager.Instance.ONBallMovementEnter += velocity => ResetTrajectory();
+
+        GameManager.Instance.ONLevelCompleted += () => SceneManager.UnloadSceneAsync(2);
         
     }
 
     private void Update()
     {
-        if (GameStateManager.Instance.CurrentState != GameStateManager.GameState.Input) return;
+        if (GameManager.Instance.CurrentState != GameManager.GameState.Input) return;
 
         CreateTrajectory();
     }
